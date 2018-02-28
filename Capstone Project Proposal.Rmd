@@ -1,0 +1,54 @@
+---
+title: "Capstone Project Proposal"
+subtitle: "Introduction to Data Science"
+author: "Kevin Tajkowski"
+output: word_document
+---
+
+**An analysis of the ecological impacts of the Red Lionfish (Pterios volitans and Pterios miles) invasion at dive sites near Little Cayman Island.**  
+
+
+### The Problem
+The introduction of the Red Lionfish (species 0683) into the Tropical Western Atlantic off of the coast of Florida is believed to have occurred in the mid 1980s via the aquarium trade^1^.  The Lionfish has since spread north along the east coast of the United States, into the Gulf of Mexico, south through the Caribbean Sea and is currently expanding southward along the east coast of South America^1^.
+
+Numerous studies have indicated a lack of natural predators in these waters, voracious appetites, a short time to reach sexual maturity and the ability to breed very rapidly^1^.  One study reported a 65% decline in the biomass of the lionfish's 42 Atlantic prey over a period of two years^2^.
+
+
+### The Client
+REEF (Reef Environmental Education Foundation) is "An active organization of divers and marine enthusiasts committed to ocean conservation".  REEF's mission is to protect biodiversity and ocean life be actively engaging and inspiring the public through citizen science, education and partnerships with the scientific community (REEF website).
+
+The REEF Volunteer Fish Survey Project was developed in 1990 and REEF has addressed the lionfish problem, with the assistance of government agencies and partners, since 2006.  REEF has sponsored lionfish derbies since 2009 resulting in the successful removal of over 21,000 lionfish in the western Atlantic.  A study of the impacts of the lionfish in a specific region would contribute to the overall knowledge of the lionfish invasion.
+
+The Cayman Islands ruling body (The Islands are a British Overseas Territory) would also be interested in this study.  The effect the lionfish have on the overall health of the reef surrounding the islands is of paramount importance considering the income generated from the scuba diving industry.  If lionfish decimate one or more important species, thereby altering the food chain and the health of the reef, a lack of underwater attractions may lead to a significant reduction in income for the nation.
+
+
+### The Data
+The data is publicly available on the REEF website.  The REEF fish survey database is organized in several levels.  The top level consists of 8 major world zones: The Tropical Western Atlantic (TWA), the Southern Atlantic States (SAS), the Northeast (NE), the Pacific Coast (PAC), the Tropical Eastern Pacific (TEP), the Hawaiian Islands (HAW), the South Pacific (SOP) and the Central Indo-Pacific (CIP).
+
+The data for this study will come from the TWA zone, which is separated into eight major regions.  The region of interest is region 5, the Northwest Caribbean, which is separated into eight units labeled from 51 to 58.  My interest is unit 52, the Cayman Islands.  Of the four possible places at the Cayman Island level, Little Cayman is labeled as 5202.
+
+A Geographic Zone Report of the REEF database using the criteria outlined above reveals that fish surveys have been taken at 84 locations around Little Cayman Island since 1993.  Furthermore, over 350 fish species, including the invasive (exotic) Red Lionfish, have been observed.  Raw data is also available by request of the Director of Science at REEF.
+
+
+### The Approach
+First, use publicly available data to determine several dive sites with the greatest abundance of fish surveys since surveying began in 1993.  I will identify the top 10-20 sites around Little Cayman Island for analysis.
+
+Second, using the top sites, identify numerous fish species that are (or were) common in the area in order to have a strong record of these species pre- and post-invasion.  My analysis will include frequency of occurrence and abundance of both lionfish and select species.  The data will be analyzed to determine relative fish abundance over the last 25 years.  Information regarding culling events will also be included where appropriate.
+
+I will then review the literature to identify the class of each species (predators, grazers, cleaners) and possible effects on the health of the reef (a loss of grazers will result in algal blooms, etc.).  
+
+Finally, using the data I will predict future numbers of fish species based on the change in the abundance of the species pre- and post-invasion.
+
+
+### The Deliverables
+The analysis will be conducted using the R statistical programming language.  All code prepared for the analysis will be provided in addition to a report on all steps taken for the analysis.  The code will be used to produce numerous charts and a statistical analysis.  A slide deck may be prepared for presentation purposes.
+
+
+### References
+(1) Lionfish Quickfacts, reef.org.  
+(2) Green SJ, Akins JL, Maljković A, Côté IM (2012) Invasive Lionfish Drive Atlantic Coral Reef Fish Declines. PLoSONE 7(3): e32596. https://doi.org/10.1371/journal.pone.0032596  
+
+***
+
+
+
