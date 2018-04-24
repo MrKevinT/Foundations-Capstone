@@ -1,0 +1,27 @@
+---
+title: "Capstone Project Data Wrangling"
+subtitle: "Introduction to Data Science"
+author: "Kevin Tajkowski"
+output: word_document
+---
+
+**An analysis of the ecological impacts of the Red Lionfish (Pterios volitans and Pterios miles) invasion at dive sites near Little Cayman Island.**  
+
+### Data Source
+The data for this study was generously provided by the Director of Science, Christy Pattengill-Semmens, Ph.D., at REEF (Reef Environmental Education Foundation).  Three text files were provided.  The first file consists of all survey data (fish sightings) at Little Cayman from 1993 to present.  The second file is a list of the known species to inhabit Tropical Western Atlantic and surrounding waters.  The third file consists of the information for each dive site at Little Cayman.
+
+### Data Importing Steps
+The first step was to read in the survey data file and replace a few column headings.  The data in the survey file includes the dive site where the species was observed, the date, physical characteristics of the water (temperatures, visibility, etc.), a species ID number, a family ID number, the abundance of the species and other information.  There are 162,896 observations (fish sightings) in the file.  The date format was changed, NAs were replaced with 0 and 2 rows with an abundance of 0 were removed.
+
+Second, the species file was imported into R with renamed column headings.  The species ID number, a species common name, a scientific name, the family ID number and the family common name were included for over 930 species.  The species included fish, turtles, eels, rays, sharks and dolphins.
+
+The final import step included reading the file with the zone (dive site) codes.  There are 91 dive sites listed at Little Cayman.  This file included the site code, the site name and latitude and longitude coordinates.
+
+### Column Manipulation
+The latitude and longitude coordinates were provided as degrees and minutes in the zone code file.  Two new columns, Latitude and Longitude, were created and the coordinates were converted to degrees.
+
+### Data Frame Generation
+The three files were then merged into one using the left_join function.
+
+
+
