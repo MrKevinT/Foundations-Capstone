@@ -49,5 +49,5 @@ Little_Cayman <- Little_Cayman %>% left_join(Zone_Codes, by = "Geozone")
 write_csv(Little_Cayman, "Little_Cayman.csv")
 
 Sample <- Little_Cayman %>% filter(Family_Name == "Angelfish")
-write_csv(Sample, "Sample.csv")
+write_csv(Sample, "Angelfish_Sample.csv")
 
