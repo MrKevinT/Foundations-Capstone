@@ -1,0 +1,154 @@
+---
+title: "Capstone Project Fish Species Analysis"
+subtitle: "Introduction to Data Science"
+author: "Kevin Tajkowski"
+output: word_document
+---
+
+### Library Calls
+Load the necessary packages.
+
+```{r, message = FALSE}
+library(readr)
+library(dplyr)
+library(stringr)
+library(ggplot2)
+```
+
+### Simple Visualization
+Use the Zone_Codes file to generate a plot showing the latitude and longitude of all of the dive sites surrounding Little Cayman.
+
+```{r, echo=FALSE, message=FALSE}
+Zone_Codes <- read_csv("Zone_Codes.csv")
+ggplot(Zone_Codes, aes(Longitude, Latitude, labels = Site_Name)) +
+  geom_point(na.rm = TRUE)  +
+  ggtitle("Coordinate Map of Little Cayman Island Dive Sites") +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  coord_quickmap()
+
+```
+
+### Data Preparation
+Load the data into a data frame.  Remove all non-fish species by Family_ID.
+
+```{r, message = FALSE}
+Little_Cayman <- read_csv("Little_Cayman.csv")
+non_fish_family <- c(15, 20, 21, 23, 24, 43, 46, 47, 49, 58, 67, 71, 75, 111, 122)
+LC <- Little_Cayman %>% filter(!(Family_ID %in% non_fish_family))
+```
+
+***
+
+### Lionfish Exploration
+Generate plots showing Lionfish abundance as a function of time.  The first plot shows the Lionfish presence at all dive sites at Little Cayman.  A smooth curve with corresponding confidence interval is added.  The second plot shows the abundance vs. time for the Lionfish at the 53 dive sites where Lionfish have been observed.
+
+```{r, echo=FALSE, message=FALSE}
+invader <- LC %>% filter(Species_ID == 683)
+selection <- LC %>% filter(Species_ID == 683) %>% group_by(Geozone) %>% summarize(count = n())
+
+ggplot(invader, aes(x = Date, y = Abundance)) +
+  geom_point() +
+  ggtitle("Abundance of Lionfish at Little Cayman") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  geom_smooth()
+
+ggplot(invader) +
+  geom_point(aes(x = Date, y = Abundance)) +
+  ggtitle("Abundance of Lionfish at Little Cayman by Dive Site") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  facet_wrap(~Site_Name)
+```
+
+***
+
+### Fish Family Exploration for all Sites
+Generate plots of all fish families at all dive sites around Little Cayman using the Family_Name.
+
+```{r, echo=FALSE}
+explore <- LC %>% group_by(Family_ID)
+
+ggplot(explore) +
+  geom_point(aes(x = Date, y = Abundance)) +
+  ggtitle("Abundance of Fish Families at Little Cayman") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  facet_wrap(~Family_Name)
+```
+
+The plot with all 52 families is rather crowded.  Several fish families are removed since there are fewer than 10 surveys for the entire family.
+
+```{r, echo=FALSE}
+low_count <- c("Batfish", "Clingfish", "Cornetfish", "Flyingfish/Halfbeak", "Flying Gurnard", "Frogfish", "Mackerel", "Mullet", "Sweeper", "Viviparous Brotula")
+
+LC_Mod <- LC %>% filter(!(Family_Name %in% low_count))
+ggplot(LC_Mod) +
+  geom_point(aes(x = Date, y = Abundance)) +
+  ggtitle("Abundance of Fish Families at Little Cayman") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  facet_wrap(~Family_Name)
+```
+
+The plot with 42 families with more than 10 surveys per family is still too crowded.  The following 4 plots show all species of several fish families plotted together with a smooth curve and confidence interval added.
+
+```{r, echo=FALSE, message=FALSE}
+explore_1 <- LC_Mod %>% group_by(Family_ID) %>% filter(Family_ID <= 17)
+ggplot(explore_1, aes(x = Date, y = Abundance)) +
+  geom_point() +
+  ggtitle("Abundance of Fish Families at Little Cayman") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  facet_wrap(~Family_Name) +
+  geom_smooth()
+
+explore_2 <- LC_Mod %>% group_by(Family_ID) %>% filter(Family_ID >= 18 & Family_ID <= 42)
+ggplot(explore_2, aes(x = Date, y = Abundance)) +
+  geom_point() +
+  ggtitle("Abundance of Fish Families at Little Cayman") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  facet_wrap(~Family_Name) +
+  geom_smooth()
+
+explore_3 <- LC_Mod %>% group_by(Family_ID) %>% filter(Family_ID >= 43 & Family_ID <= 65)
+ggplot(explore_3, aes(x = Date, y = Abundance)) +
+  geom_point() +
+  ggtitle("Abundance of Fish Families at Little Cayman") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  facet_wrap(~Family_Name) +
+  geom_smooth()
+
+explore_4 <- LC_Mod %>% group_by(Family_ID) %>% filter(Family_ID >= 66 & Family_ID <= 120)
+ggplot(explore_4, aes(x = Date, y = Abundance)) +
+  geom_point() +
+  ggtitle("Abundance of Fish Families at Little Cayman") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  facet_wrap(~Family_Name) +
+  geom_smooth()
+
+```
+
+### Fish Species Exploration for Specific Families
+The following pairs of plots show the abundance vs. time for specific fish families.  The first plot shows the entire family at all sites at Little Cayman.  A smooth curve and confidence interval are added to this plot.  The second plot shows all of the species within each family.
+
+Grouper and Snapper are prime predators in the Caribbean waters.  Grouper are part of the Seabass family.  The juveniles of these species, the fish in the Goby family and the fish in the Wrasse family have small, cigar-shaped bodies, ideal prey for the Lionfish.
+
+```{r, echo=FALSE, message=FALSE}
+Families <- c("Angelfish", "Goby", "Seabass", "Snapper", "Wrasse")
+
+for(i in seq_along(Families)){
+  current <- LC %>% filter(Family_Name == Families[i])
+  print(ggplot(current, aes(x = Date, y = Abundance)) +
+          geom_point() +
+          ggtitle(paste("Relative Abundance of",Families[i],"Family")) +
+          theme(plot.title = element_text(hjust = 0.5)) +
+          geom_smooth())
+  print(ggplot(current, aes(x = Date, y = Abundance)) +
+          geom_point() +
+          ggtitle(paste("Relative Abundance of Species in the",Families[i],"Family")) +
+          theme(plot.title = element_text(hjust = 0.5)) +
+          facet_wrap(~English_Name))
+}
+```
+
+***
+
+
+
