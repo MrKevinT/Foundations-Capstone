@@ -1,0 +1,218 @@
+---
+title: "Capstone Project Fish Species Analysis"
+subtitle: "Introduction to Data Science"
+author: "Kevin Tajkowski"
+output: word_document
+---
+
+### Library Calls
+Load the necessary packages.
+
+```{r Library, message = FALSE}
+library(readr)
+library(dplyr)
+library(stringr)
+library(ggplot2)
+library(grid)
+library(gridExtra)
+```
+
+### Simple Visualization
+Use the Zone_Codes file to generate a plot showing the latitude and longitude of all of the dive sites at Little Cayman.
+
+```{r Visualization, echo=FALSE, message=FALSE, fig.height=3.5}
+Zone_Codes <- read_csv("Zone_Codes.csv")
+ggplot(Zone_Codes, aes(Longitude, Latitude, labels = Site_Name)) +
+  geom_point(na.rm = TRUE, size = 0.75)  +
+  ggtitle("Coordinate Map of Little Cayman Island Dive Sites") +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5, size = 11.0)) +
+  coord_quickmap()
+
+```
+
+### Data Preparation
+Load the data into a data frame.  Remove all non-fish species by Family_Name.  Non-fish species observed in the data set include sharks, rays, eels, turtles and a dolphin.
+
+```{r Preparation, message = FALSE}
+Little_Cayman <- read_csv("Little_Cayman.csv")
+non_fish_family <- c("Requiem Shark", "Conger", "Dolphin", "Stingray", "Manta", "Moray", "Eagle Ray", "Snake Eel", "Carpet Shark", "Hammerhead Shark", "Electric Ray", "Round Stingrays", "Sea Turtles", "#N/A")
+LC <- Little_Cayman %>% filter(!(Family_Name %in% non_fish_family))
+```
+
+***
+
+### Lionfish Exploration
+The Red Lionfish, otherwise known as the Common Lionfish, is species 683 and is a member of the Scorpionfish family.  Here is a list of the 5 species of Scorpionfish observed at Little Cayman.
+
+```{r Lionfish 1, echo=FALSE, message=FALSE}
+invader <- LC %>% filter(Species_ID == 683)
+selection <- LC %>% filter(Species_ID == 683) %>% group_by(Geozone) %>% summarize(count = n())
+
+Scorpionfish <- LC %>% filter(Family_Name == "Scorpionfish") %>% group_by(English_Name) %>% summarize(count = n())
+print(Scorpionfish, show.rownames = FALSE)
+```
+
+Generate plots showing Lionfish abundance as a function of time.  The following figure shows the Lionfish presence at all dive sites at Little Cayman.  A smooth curve with corresponding confidence interval and a trendline are added to the plot on the left side of the figure.  A second order (red) polyonomial was then fit to the data as seen on the right side of the figure.
+
+
+```{r Lionfish 2, echo=FALSE, message=FALSE, fig.height = 3.0, fig.width = 7.5}
+lionfish_plot <- ggplot(invader, aes(x = Date, y = Abundance)) +
+  geom_point(size = 0.5) +
+  ggtitle("Abundance of Lionfish at Little Cayman") +
+  theme(plot.title = element_text(hjust = 0.5, size = 9.0))
+
+lionfish_plot1 <- lionfish_plot +
+  geom_smooth() + geom_smooth(method = "lm", color = "red", se = FALSE) +
+  ggtitle("(with a Linear Trendline)")
+lionfish_plot2 <- lionfish_plot +
+  geom_smooth(method="lm", se = TRUE, formula=y ~ poly(x, 2), color="red") +
+  ggtitle("(with a 2nd Order Polynomial)")
+
+grid.arrange(lionfish_plot1, lionfish_plot2, nrow = 1, top = textGrob(paste("Relative Abundance of Lionfish at Little Cayman"), gp = gpar(fontsize = 12, font = 3)))
+```
+
+The following series of plots show the Lionfish presence at numerous dive sites at Little Cayman.
+
+```{r Lionfish 3, echo=FALSE, fig.height = 3.0, fig.width = 7.5}
+site_plot <- function(the_data) {
+  ggplot(the_data, aes(x = Date, y = Abundance)) +
+    geom_point(size = 1.0) +
+    ylim(0, 3.0) +
+    facet_wrap(~Site_Name, ncol = 4) +
+    theme(strip.text.x = element_text(size = 8.5), axis.text.x = element_text(angle = 60, hjust = 1))
+}
+
+group_1 <- invader %>% group_by(Site_Name) %>% filter(Site_Name <= "Charlie's Chimney")
+group_2 <- invader %>% group_by(Site_Name) %>% filter(Site_Name > "Charlie's Chimney" & Site_Name <= "Gay's Reef")
+group_3 <- invader %>% group_by(Site_Name) %>% filter(Site_Name > "Gay's Reef" & Site_Name <= "Lea Lea's Lookout")
+group_4 <- invader %>% group_by(Site_Name) %>% filter(Site_Name > "Lea Lea's Lookout" & Site_Name <= "Meadow's")
+group_5 <- invader %>% group_by(Site_Name) %>% filter(Site_Name > "Meadow's" & Site_Name <= "Rock Bottom Wall")
+group_6 <- invader %>% group_by(Site_Name) %>% filter(Site_Name > "Rock Bottom Wall" & Site_Name <= "The Great Wall (Sheer Wall- East and West)")
+group_7 <- invader %>% group_by(Site_Name) %>% filter(Site_Name > "The Great Wall (Sheer Wall- East and West)")
+
+site_plot(group_1)
+site_plot(group_2)
+site_plot(group_3)
+site_plot(group_4)
+site_plot(group_5)
+site_plot(group_6)
+site_plot(group_7)
+```
+
+
+***
+
+### Fish Family Exploration for all Sites
+Generate plots of all fish families at all dive sites around Little Cayman using the Family_Name.
+
+```{r Family 1, echo=FALSE, fig.height=11.5, fig.width=7.5}
+explore <- LC %>% group_by(Family_ID)
+
+ggplot(explore, aes(x = Date, y = Abundance)) +
+  geom_point(size = 0.5) +
+  ggtitle("Abundance of Fish Families at Little Cayman") +
+  theme(plot.title = element_text(hjust = 0.5, size = 11)) +
+  facet_wrap(~Family_Name, ncol = 6) +
+  theme(strip.text.x = element_text(size = 8.5), axis.text.x = element_text(angle = 60, hjust = 1))
+```
+
+Fish families with less than thirty surveys for all species in the family are identified and removed from the data set.  The abundance vs. time of numerous families is then plotted side-by-side with a smooth curve (including confidence interval) added to each family plot.
+
+```{r Family 2, echo=FALSE, message=FALSE, fig.height=11.5, fig.width=8.0}
+low_count <- c("Batfish", "Clingfish", "Cornetfish", "Dartfish", "Dragonet", "Flyingfish/Halfbeak", "Flying Gurnard", "Frogfish", "Mackerel", "Mullet", "Needlefish", "Silversides / Herrings / Anchovies", "Sweeper", "Viviparous Brotula")
+LC_Mod <- LC %>% filter(!(Family_Name %in% low_count))
+
+plot_families <- function(the_data) {
+  ggplot(the_data, aes(x = Date, y = Abundance)) +
+    geom_point(size = 0.5) +
+    ggtitle("Abundance of Fish Families at Little Cayman") +
+    theme(plot.title = element_text(hjust = 0.5, size = 12)) +
+    theme(strip.text.x = element_text(size = 8.5), axis.text.x = element_text(angle = 60, hjust = 1)) +
+    facet_wrap(~Family_Name, ncol = 3) +
+    geom_smooth() +
+    geom_smooth(method = "lm", color = "red", se = FALSE)
+}
+
+family_1 <- LC_Mod %>% group_by(Family_Name) %>% filter(Family_Name <= "Jack")
+family_2 <- LC_Mod %>% group_by(Family_Name) %>% filter(Family_Name > "Jack")
+# & Family_Name <= "Triggerfish")
+#family_3 <- LC_Mod %>% group_by(Family_Name) %>% filter(Family_Name > "Triggerfish" & Family_Name <= "Parrotfish")
+#family_4 <- LC_Mod %>% group_by(Family_Name) %>% filter(Family_Name > "Parrotfish" & Family_Name <= "Squirrelfish")
+#family_5 <- LC_Mod %>% group_by(Family_Name) %>% filter(Family_Name > "Squirrelfish")
+
+plot_families(family_1)
+plot_families(family_2)
+#plot_families(family_3)
+#plot_families(family_4)
+#plot_families(family_5)
+```
+
+### Fish Species Exploration for Specific Families
+The following pairs of plots show the abundance vs. time for specific fish families.  The first plot shows the entire family at all sites at Little Cayman.  A smooth curve and confidence interval are added to this plot.  The second plot shows all of the species within each family.
+
+Grouper and Snapper are prime predators in the Caribbean waters.  Grouper are part of the Seabass family.  The juveniles of these species, the fish in the Goby family and the fish in the Wrasse family have small, cigar-shaped bodies, ideal prey for the Lionfish.
+
+```{r Species, echo=FALSE, message=FALSE, fig.height=4.5, fig.width=7.0}
+Families <- c("Goby", "Seabass", "Snapper", "Wrasse")
+
+family_list <- LC_Mod %>% group_by(Family_Name) %>% summarize(count = n())
+family_list <- as.vector(family_list[['Family_Name']])
+
+for(i in seq_along(Families)){
+  current <- LC %>% filter(Family_Name == Families[i])
+  print(ggplot(current, aes(x = Date, y = Abundance)) +
+          geom_point(size = 0.5) +
+          ggtitle(paste("Relative Abundance of",Families[i],"Family")) +
+          theme(plot.title = element_text(hjust = 0.5)) +
+          geom_smooth())
+  print(ggplot(current, aes(x = Date, y = Abundance)) +
+          geom_point(size = 0.5) +
+          ggtitle(paste("Relative Abundance of all Species in the",Families[i],"Family")) +
+          theme(plot.title = element_text(hjust = 0.5, size = 12)) +
+          theme(strip.text.x = element_text(size = 8.0), axis.text.x = element_text(angle = 60, hjust = 1)) +
+          facet_wrap(~English_Name))
+}
+```
+
+***
+
+### Exploration of All Families Before and After Lionfish Invasion
+The following plots show the survey data for each fish family.  The plot on the left shows all the data for the named family, the center plot shows the data from when the surveys began to when the first Lionfish sighting occurred (2009-02-17) and the plot on the right shows the data from the first Lionfish sighting to when the data was obtained.  Each sub plot has a corresponding trendline added.
+
+```{r Side-by-Side, echo=FALSE, message=FALSE, fig.height = 2.5, fig.width = 7}
+plot_pairs <- function(cur_fam, LC_Mod){
+  data_set_0 <- LC_Mod %>% filter(Family_Name == cur_fam)
+  data_set_1 <- LC_Mod %>% filter(Family_Name == cur_fam) %>% filter(Date < "2009-02-17")
+  data_set_2 <- LC_Mod %>% filter(Family_Name == cur_fam) %>% filter(Date >= "2009-02-17")
+  
+  complete <- ggplot(data_set_0, aes(x = Date, y = Abundance)) +
+    geom_point(size = 0.5) +
+    ggtitle("(Complete Survey)") +
+    theme(plot.title = element_text(hjust = 0.5, size = 9.5)) +
+    theme(axis.text.x = element_text(angle = 60, hjust = 1), axis.title.x = element_blank()) +
+    geom_smooth(method = "lm", color = "red")
+  before <- ggplot(data_set_1, aes(x = Date, y = Abundance)) +
+    geom_point(size = 0.5) +
+    ggtitle("(Pre Lionfish)") +
+    theme(plot.title = element_text(hjust = 0.5, size = 9.5)) +
+    theme(axis.text.x = element_text(angle = 60, hjust = 1), axis.title.x = element_blank(), axis.title.y = element_blank()) +
+    geom_smooth(method = "lm", color = "red")
+  after <- ggplot(data_set_2, aes(x = Date, y = Abundance)) +
+    geom_point(size = 0.5) +
+    ggtitle("(Post Lionfish)") +
+    theme(plot.title = element_text(hjust = 0.5, size = 9.5)) +
+    theme(axis.text.x = element_text(angle = 60, hjust = 1), axis.title.x = element_blank(), axis.title.y = element_blank()) +
+    geom_smooth(method = "lm", color = "red")
+
+  grid.arrange(complete, before, after, nrow = 1, top = textGrob(paste("Relative Abundance of the",cur_fam, "Family"), gp = gpar(fontsize = 12, font = 3)), bottom = textGrob("Date"))
+}
+
+lapply(family_list, FUN = plot_pairs, LC_Mod) # All available families
+
+```
+
+***
+
+
+
