@@ -1,0 +1,87 @@
+---
+title: "Capstone Project Statistical Analysis"
+subtitle: "Introduction to Data Science"
+author: "Kevin Tajkowski"
+output: word_document
+---
+
+**An analysis of the ecological impacts of the Red Lionfish (Pterios volitans and Pterios miles) invasion at dive sites near Little Cayman Island.**  
+
+
+### Visualization
+Of the three data files provided by REEF, the LC_Zonecodes.txt file consisted of the zone code, name and latitude and longitude coordinates of each dive site at Little Cayman Island.  The latitude and longitude coordinates (in degrees and minutes) were converted to degrees and plotted to provide a visual representation of the dive sites at Little Cayman.
+
+The majority of the dive sites are located off-shore along the western half of the island.  The Bloody Bay Wall is located along the western end of the north coast of the island and includes approximately a dozen different dive sites.
+
+
+```{r, echo=FALSE, message=FALSE}
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(magick)
+image_read("LC_Island.jpg")
+```
+
+        Figure 1. Little Cayman Island (obtained from Google Earth Pro)
+
+
+
+### Removing Non-fish Species
+The REEF_TWAspecies.txt file was inspected to determine the number and type of families present in the data.  Of the existing sixty-seven (67) families, fourteen (14) families of non-fish species, consisting of sharks, eels, rays, turtles, and a dolphin species, were present.  These families were removed from the data set in order to analyze the fifty-three (53) fish families.
+
+
+### Lionfish Analysis
+The red lionfish, also known as the common lionfish, is a member of the scorpionfish family.  Five members of the scorpionfish family have been observed at Little Cayman: mushroom, plumed, reef and spotted scorpionfish and red lionfish (spieces_ID = 683).  The plot below shows the relative abundance of the lionfish species as a function of time for all dive sites at Little Cayman.
+
+
+```{r, echo=FALSE, message=FALSE, fig.height = 3.0, fig.width = 4.0}
+Little_Cayman <- read_csv("Little_Cayman.csv")
+non_fish_family <- c("Requiem Shark", "Conger", "Dolphin", "Stingray", "Manta", "Moray", "Eagle Ray", "Snake Eel", "Carpet Shark", "Hammerhead Shark", "Electric Ray", "Round Stingrays", "Sea Turtles", "#N/A")
+invader <- Little_Cayman %>% filter(!(Family_Name %in% non_fish_family)) %>% filter(Species_ID == 683)
+ggplot(invader, aes(x = Date, y = Abundance)) +
+  geom_point(size = 0.5) +
+  ggtitle("Abundance of Lionfish at Little Cayman\n(with a linear trendline)") +
+  theme(plot.title = element_text(hjust = 0.5, size = 9.0)) +
+  geom_smooth() + geom_smooth(method = "lm", color = "red", se = FALSE)
+
+```
+
+                  Figure 2.  Lionfish Survey Data
+
+
+
+Lionfish have been observed at 53 dive sites.  The dive sites with the greatest number of lionfish surveys include Bus Stop, Cumber's Caves, Dot's Hot Spot, Jackson's Reef, Joy's Joy, Lea Lea's Lookout, Marilynn's Cut (Great Gash), Randy's Gazebo, Sarah's Set, The Great Wall and Three Fathom Reef/Mixing Bowl, many of which are along the Bloody Bay Wall on the western end of the northern coast of the island.
+
+### Family Abundance Analysis
+A plot was generated showing the abundance of all species for the entire data set and a linear trendline was fit to the data.  The trendline has a negative slope and suggests a general decline in the biomass of observed fish species.  Two alternate plots were generated separating the data into two parts: pre-lionfish and post-lionfish.  Following the first sighting of a lionfish (Febraury 17, 2009) the data again show a general decline in biomass of all fish species.
+
+To explore the abundance of fish families, a plot was generated for each family showing the abundance as a function of time for all species in the family. Families with less then 30 surveys combined for all species were then excluded from further analysis.  The abundance vs. time plots were then regenerated and a linear trendline was added.  Of the 53 families, the trendline appeared to have a zero slope (upon visual inspection) for 7 families: blenny - Pike, tube and flag, blenny (Labrisomids), boxfish, filefish, goatfish, parrotfish and porgy.  The trendline appeared to have a positive slope for the goby, jawfish, remora and scorpionfish families.
+
+I then generated plots of all of the species in a family for the following families: goby, seabass, snapper and wrasse.  Snapper and grouper (which are part of the seabass family) are prime predators in the Caribbean waters. Whether as juveniles or adults, species within the four families mentioned exhibit one of the characteristics that are reportedly important in a species to be considered prime prey for lionfish: long, slender bodies^1^.  Ample data is present for further analysis of many of the species of each of these families.
+
+The next series of plots generated consists of three plots for each family in the data set.  The first plot shows abundance vs. time as before.  The second plot shows abundance vs. time for the period 1995 to February 17, 2009, the date of the first lionfish sighting.  The third plot displays the data from February 17, 2009 to April 9, 2018, when the data set was provided.
+
+The most common scenario indicates a general increase in fish numbers prior to February 17, 2009 followed by a general decrease thereafter (17 families show this trend, including the scorpionfish family).  The second most common scenario is a general decrease before and after this date (12 families).  Only 7 families show a general increase in numbers following February 17, 2009 with one of those families appearing stable before this date.
+
+Fairly large regions of error are present for some of these plots indicating sparse data and a lack of statistical confidence (i.e. tarpon family).  Further analysis of families and/or species within families is planned for families with better confidence intervals, especially if certain species have characteristics of being a prime prey for lionfish (long, slender bodies, solitary behavior and commonly found near the seafloor at dusk or during the night)^1^.
+
+```{r Summary, echo=FALSE, message=FALSE, fig.height = 4, fig.width = 6}
+slope <- read_csv("slope.csv")
+summ_table <- slope %>% group_by(Pre_Lionfish, Post_Lionfish) %>% summarize(total = n())
+
+new_column <- c("neg-neg", "neg-pos", "pos-neg", "pos-pos", "zero-neg", "zero-pos")
+summ_table$effect <- new_column
+ggplot(summ_table, aes(x = effect, y = total)) + geom_col(fill = "blue") +
+  ggtitle("Change in Slope of Trendline of Species Abundance\nBefore and After Lionfish") +
+  theme(plot.title = element_text(hjust = 0.5, size = 10.0)) +
+  ylim(0, 20) +
+  labs(x = "Slope of Trendline (before-after)", y = "Number of Fish Families") +
+  geom_text(aes(label=total), vjust = -0.5)
+```
+
+        Figure 3: Summary of Slope of Trendlines of Fish Family Abundance
+                       Before and After Lionfish Arrival
+
+### Reference:
+1) Lionfish analysis reveals most vulnerable prey as invasion continues (24 November 2014) Phys.org - Provided by Oregon State University
+
