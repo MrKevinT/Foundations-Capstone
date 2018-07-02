@@ -1,0 +1,114 @@
+---
+title: "Capstone Project Milestone Report"
+subtitle: "Introduction to Data Science"
+author: "Kevin Tajkowski"
+output: word_document
+---
+
+**An analysis of the ecological impacts of the red lionfish (Pterios volitans and Pterios miles) invasion at dive sites at Little Cayman Island.**  
+
+
+The purpose of this project is to study the effects on native fish species of the introduction of the invasive red lionfish (pterios volitans), which is native to the Indo Pacific region (tropical waters of the south-west Pacific Ocean and the Indian Ocean).  The project will focus on dive sites at Little Cayman Island and will exclude non-fish species such as sharks, turtles, eels and rays.
+
+
+### Background
+
+Invasive species have been identified in countries all over the world.  Often the invasion results in disasterous consequences for native species.  Invasive species can be any living organism including mammals, plants, birds and fish.  The common rabbit was once native to Southern Europe and North Africa.  It has now spread to almost every continent on Earth.  Kudzu (a vine), the European starling, the cane toad and water hyacinth are all invasive species.  Asian carp native to Eastern Russia and China have invaded North America and Europe.  Zebra Mussels native to the Black and Caspian Seas have invaded Russia, Europe and North America.
+
+In recent history the red lionfish has become an invasive species in the Tropical Western Atlantic.  The introduction of the red lionfish into these waters off of the coast of Florida is believed to have occurred in the mid 1980s via the aquarium trade^1^.  The lionfish has since spread north along the east coast of the United States, into the Gulf of Mexico, south through the Caribbean Sea and is currently expanding southward along the east coast of South America^1^.
+
+Numerous studies have indicated a lack of natural predators in these waters, voracious appetites, a short time to reach sexual maturity and the ability to breed very rapidly^1^.  One study reported a 65% decline in the biomass of the lionfish's 42 Atlantic prey over a period of two years^2^.  Lionfish reportedly have a large list of prey including several members of the wrasse family, lizardfish, filefish, cardinal fish, many members of the chromis, basslet and goby families, parrotfish and occassionally various species of shrimp^3^.
+
+```{r, echo=FALSE, message=FALSE}
+library(magick)
+image_read("LF_REEF.jpg")
+```
+
+              Figure 1. A Red Lionfish (www.reef.org)
+
+
+### Study Area
+
+I chose to study the effects of the lionfish invasion into Caribbean waters on the fish species inhabiting reefs at Little Cayman Island.  The Cayman Islands are located in the Northwest Caribbean.
+
+Little Cayman is one of two sister islands (along with Cayman Brac) in the Cayman Island chain, a British overseas territory.  All three islands (including Grand Cayman) receive income from the tourism industry, specifically SCUBA diving.  SCUBA diving is dependent upon healthy reefs and abundant aquatic life in and around the reefs.  A significant decline in aquatic life and coral would likely result in a drastic reduction in SCUBA activities and income for the territory.  This scenario could affect any island nation or country with a coastline.
+
+```{r, echo=FALSE, message=FALSE}
+image_read("TWA_Region_5.jpg")
+```
+
+             Figure 2. Region 5 of the Tropical Western Atlantic
+             Consisting of the Northwest Caribbean (www.reef.org)
+
+
+```{r, echo=FALSE, message=FALSE}
+image_read("LC_Island.jpg")
+```
+
+          Figure 3.  Little Cayman Island in the Northwest Caribbean
+                             (Google Maps)
+
+
+### The Data
+##### Details of the Data
+Data for the REEF ('www.reef.org') fish surveys was provided by the Director of Science of REEF (Reef Environmental Education Foundation).  REEF's mission is "to protect biodiversity and ocean life by actively engaging and inspiring the public through citizen science, education, and partnerships with the scientific community."
+
+Three data files were provided.  The first file consisted of actual survey data at Little Cayman from 1993 to April of 2018.  Survey data includes the date of the survey, water temperatures, depths of the dive (maximum and average), visibility, species name and ID, the location of the dive (name of the dive site) and the relative abundance of each species observed.  Over 162,800 surveys have been conducted at Little Cayman.  The relative abundance is categorized as follows: an abundance of 1 indicates 1 individual of a particular species is observed.  An abundance of 2 indicates from 2 to 10 individuals, an abundance of 3 indicates 11 to 100 individuals and an abundance of 4 indicates more than 100 individuals were observed.  The values of abundance are used in this study.
+
+The second data file consisted of fish and non-fish (sharks, eels, rays, etc.) species data, to include the name of the family that each species belongs to.  This list of 933 species represents the known species present in the Tropical Western Atlantic zone, which includes The Gulf of Mexico and the Caribbean Sea.  Over 350 of these species have been observed and recorded in surveys at Little Cayman.  The third file consisted of the names of the approximately 90 dive sites at Little Cayman, a geographic code representing each dive site (also found in the survey file) and latitude and longitude coordinates.
+
+##### Limitations
+The data set does not include information on predators and prey, in other words who eats whom.  In addition, although the maximum depth and average depth of each dive is recorded, the specific depth at which a lionfish was observed was not recorded.  Consequently, we cannot study the range of depths that lionfish are observed, although lionfish reportedly inhabit all marine habitat types down to 300m (1000 ft)^1^.
+
+##### Wrangling
+A minimum amount of wrangling was necessary in order to prepare the data set.  The three data files were imported and minor changes were made to the column headers.  Latitude and longitude coordinates were converted from degrees and minutes to degrees.  An abundance of zero was recorded on two rows of the data set, likely due to a data entry error, and these rows were consequently deleted.  Finally, the column for Family_ID in the survey data file was deleted as it was redundent.  The Family_ID column was present in the species data file.
+
+
+### Preliminary Exploration
+##### Fish Families
+The REEF_TWAspecies.txt file was inspected to determine the number and type of families present in the data.  Of the existing sixty-seven (67) families, fourteen (14) families of non-fish species, consisting of sharks, eels, rays, turtles, and a dolphin species, were present.  These families were removed from the data set in order to analyze the fifty-three (53) fish families.
+
+##### Lionfish
+The red lionfish, also known as the common lionfish, is a member of the scorpionfish family.  Five members of the scorpionfish family have been observed at Little Cayman: mushroom, plumed, reef and spotted scorpionfish and the invasive red lionfish.
+
+Lionfish have been observed at 53 dive sites.  The dive sites with the greatest number of Lionfish surveys include Bus Stop, Cumber's Caves, Dot's Hot Spot, Jackson's Reef, Joy's Joy, Lea Lea's Lookout, Marilynn's Cut (Great Gash), Randy's Gazebo, Sarah's Set, The Great Wall and Three Fathom Reef/Mixing Bowl, many of which are along the Bloody Bay Wall on the western end of the northern coast of the island.
+
+The first recorded lionfish sighting occurred on February 17, 2009.  This date was used to divide the data into two sections: pre-lionfish and post-lionfish.  A plot of the data (consisting of all fish species observed) during the post-lionfish time frame shows a general decline in the biomass of all fish species (via a linear trendline).
+
+##### Family Abundance Analysis
+Less than 30 surveys were present for all species in several of the fish families.  These families were excluded from further analysis.
+
+The data was divided into pre- and post-lionfish data.  For each data set, a plot of abundance vs. date was generated for all species in each of the remaining fish families.  A linear trendline was included in each plot and the slope of each trendline was determined.  A positive slope indicates a general increase in fish numbers and a negative slope indicates a general decrease in numbers.  The density plot below shows the slopes of the trendlines.  Red corresponds to pre-lionfish data and green corresponds to post-lionfish data.
+
+```{r, message=FALSE, echo=FALSE}
+library(readr)
+slope_data <- read_csv("slope_data.csv")
+  
+d1 <- density(slope_data$pre_slope)
+d2 <- density(slope_data$post_slope)
+xlim <- range(d1$x, d2$x)
+ylim <- range(d1$y, d2$y)
+cols <- c("red", "green")
+plot(1, xlim=xlim, ylim=ylim, type='n', main='Pre and Post-Lionfish Density Comparison', xlab='Slope of Trendline fit to Family Abundance Data', ylab='Density')
+lines(d1$x, d1$y, col=cols[1])
+lines(d2$x, d2$y, col=cols[2])
+lg <- NULL
+lg <- c(lg, sprintf('Pre Lionfish, n=%s', nrow(slope_data)))
+lg <- c(lg, sprintf('Post Lionfish, n=%s', nrow(slope_data)))
+legend('topleft', lg, lwd=2, col=cols)
+```
+
+    Figure 4. Density Plots of the Slopes of Trendlines.
+
+### Future Work
+One study has identified key characteristics in fish species to be ideal prey for lionfish^4^.  Ideal prey species reportedly have long, slender bodies, display solitary behavior and are commonly found near the seafloor at dusk or during the night.  The list of prey species above (from reference 3) will be investigated further.  Further analysis of the data set will aid in determining the statistical significance of these general declines in population.
+
+Snapper and grouper (part of the seabass family) are primary predators in Caribbean waters.  These species and other ecologically important species will also be analyzed.  Although adult populations are not threatened by the lionfish, as they are quite a bit larger, juveniles are.  A significant reduction of these species may result in drastic changes to the food web.  In addition, coral health is at risk if lionfish decimate algae-eating populations of fish resulting in an overabundance of algae on otherwise healthy coral.
+
+***
+
+### References
+(1) Lionfish Quickfacts, www.reef.org.
+(2) Green SJ, Akins JL, Maljković A, Côté IM (2012) Invasive Lionfish Drive Atlantic Coral Reef Fish Declines. PLoSONE 7(3): e32596. https://doi.org/10.1371/journal.pone.0032596
+(3) Global Invasive Species Database (www.iucngisd.org)
+(4) Lionfish analysis reveals most vulnerable prey as invasion continues (24 November 2014) Phys.org
