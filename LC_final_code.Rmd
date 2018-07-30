@@ -1,0 +1,564 @@
+---
+title: "Capstone Project"
+subtitle: "Introduction to Data Science"
+author: "Kevin Tajkowski"
+output: word_document
+---
+
+**An analysis of the ecological impact of the red lionfish (Pterios volitans) invasion at dive sites at Little Cayman Island**  
+
+### Library Calls
+Load the necessary packages.
+
+```{r Packages, echo=FALSE, message=FALSE}
+library(readr)
+library(dplyr)
+library(stringr)
+library(ggplot2)
+library(lubridate)
+library(grid)
+library(gridExtra)
+library(magick)
+image_read("LF_REEF.jpg")
+```
+Figure 1. A Red Lionfish (www.reef.org)
+
+```{r, echo=FALSE, message=FALSE}
+image_read("TWA_Region_5.jpg")
+```
+Figure 2. Region 5 of the Tropical Western Atlantic Consisting of the Northwest Caribbean (www.reef.org)
+
+```{r, echo=FALSE, message=FALSE}
+image_read("LC_Island.jpg")
+```
+Figure 3.  Little Cayman Island in the Northwest Caribbean (Google Maps)
+
+### Data Wrangling
+Read in survey data and replace certain column headings. Clean up the data - Change the data format, replace NAs with 0 in the MaxDepth column, remove Family_ID column and remove two rows with Abundance = 0
+
+```{r Surveys, echo=FALSE, message=FALSE}
+Survey_Data <- read_tsv("littlecayman_040918.txt")
+Survey_Data <- rename(Survey_Data, Species_ID = Species, Family_ID = Family)
+
+Survey_Data$Date <- mdy(Survey_Data$Date)
+Survey_Data$MaxDepth[which(is.na(Survey_Data$MaxDepth))] <- 0
+Survey_Data <- Survey_Data %>% select(-Family_ID)
+Survey_Data <- Survey_Data %>% filter(Abundance != 0)
+```
+
+Read in species data
+
+```{r Species, echo=FALSE, message=FALSE}
+S_Heading <- c("Species_ID", "English_Name", "Scientific", "Family_ID", "Family_Name")
+Species <- read_tsv("REEF_TWAspecies.txt", skip=1, col_names = S_Heading)
+```
+
+Read in and manipulate zone code data
+
+```{r Zones, echo=FALSE, message=FALSE}
+Zone_Heading <- c("None", "Geozone", "Site_Name", "Lat", "Long")
+Zone_Codes <- read_delim("LC_Zonecodes.txt", skip = 8, delim = "|", col_names = Zone_Heading)
+Lat_Deg <- as.numeric(word(Zone_Codes$Lat, 1, sep = " "))
+Lat_Min <- as.numeric(word(Zone_Codes$Lat, -1, sep = " "))
+Long_Deg <- as.numeric(word(Zone_Codes$Long, 1, sep = " "))
+Long_Min <- as.numeric(word(Zone_Codes$Long, -1, sep = " "))
+
+Latitude <- vector("double", nrow(Zone_Codes))
+Longitude <- vector("double", nrow(Zone_Codes))
+for(i in seq_along(Latitude)) {
+  Latitude[i] <- Lat_Deg[i] + Lat_Min[i]/60
+  Longitude[i] <- Long_Deg[i] - Long_Min[i]/60
+}
+Zone_Codes <- cbind(Zone_Codes, Latitude, Longitude)
+Zone_Codes <- Zone_Codes %>% select(-None, -Lat, -Long)
+```
+
+Generate a plot showing the dive sites at Little Cayman using the latitude and longitude coordinates
+
+```{r Visualization, echo=FALSE, message=FALSE, fig.height=3.5}
+ggplot(Zone_Codes, aes(Longitude, Latitude, labels = Site_Name)) +
+  geom_point(na.rm = TRUE, size = 0.75) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5, size = 11.0)) +
+  coord_quickmap()
+```
+Figure 4.  A Coordinate Map of the Dive Sites at Little Cayman Island 
+
+Join the three data files
+
+```{r Join, echo=FALSE, message=FALSE}
+Little_Cayman <- Survey_Data %>% left_join(Species, by = "Species_ID")
+Little_Cayman <- Little_Cayman %>% left_join(Zone_Codes, by = "Geozone")
+```
+
+
+### Data Preparation
+Remove all non-fish species by Family_Name.  Non-fish species observed in the data set include sharks, rays, eels, turtles and a dolphin.
+
+```{r Non-fish, echo=FALSE, message=FALSE}
+non_fish_family <- c("Requiem Shark", "Conger", "Dolphin", "Stingray", "Manta", "Moray", "Eagle Ray", "Snake Eel", "Carpet Shark", "Hammerhead Shark", "Electric Ray", "Round Stingrays", "Sea Turtles", "#N/A")
+LC <- Little_Cayman %>% filter(!(Family_Name %in% non_fish_family))
+```
+
+### Lionfish Exploration
+Create a data frame with surveys of only lionfish
+
+```{r Lionfish 1, echo=FALSE, message=FALSE}
+invader <- LC %>% filter(Species_ID == 683)
+selection <- LC %>% filter(Species_ID == 683) %>% group_by(Geozone) %>% summarize(count = n())
+
+Scorpionfish <- LC %>% filter(Family_Name == "Scorpionfish") %>% group_by(English_Name) %>% summarize(count = n())
+```
+
+Generate a plot showing the lionfish presence at all dive sites at Little Cayman.
+
+```{r Lionfish 2, echo=FALSE, message=FALSE, fig.height = 3.0, fig.width = 5.0}
+ggplot(invader, aes(x = Date, y = Abundance)) +
+  geom_point(size = 0.5) +
+  theme(plot.title = element_text(hjust = 0.5, size = 9.0)) +
+  geom_smooth() + geom_smooth(method = "lm", color = "red", se = FALSE)
+```
+Figure 5: Abundance of Lionfish at Little Cayman
+
+### Fish Family Exploration of all Species
+Generate a plot showing the abundance of all species in all families for all survey data at Little Cayman.
+
+```{r All Species 1, echo=FALSE, fig.height=3.0, fig.width=4.0}
+ggplot(LC, aes(x = Date, y = Abundance)) +
+  geom_point(size = 0.5) +
+  theme(plot.title = element_text(hjust = 0.5, size = 11)) +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1)) +
+  geom_smooth(method = "lm", color = "red")
+
+```
+Figure 6: Abundance of All Fish Species at Little Cayman
+
+February 17, 2009 was used as the date to separate the data into two groups: before the lionfish arrived and after.  A plot of the abundance vs. date of all species was generated for each group and a trendline was added to each plot.
+
+```{r All Species 2, echo=FALSE, fig.height=3.0, fig.width=7.0}
+  all_species_before <- LC %>% filter(Date < "2009-02-17")
+  all_species_after <- LC %>% filter(Date >= "2009-02-17")
+  
+  all_before <- ggplot(all_species_before, aes(x = Date, y = Abundance)) +
+    geom_point(size = 0.5) +
+    ggtitle("(Pre Lionfish)") +
+    theme(plot.title = element_text(hjust = 0.5, size = 9.5)) +
+    theme(axis.text.x = element_text(angle = 60, hjust = 1), axis.title.x = element_blank(), axis.title.y = element_blank()) +
+    geom_smooth(method = "lm", color = "red")
+  all_after <- ggplot(all_species_after, aes(x = Date, y = Abundance)) +
+    geom_point(size = 0.5) +
+    ggtitle("(Post Lionfish)") +
+    theme(plot.title = element_text(hjust = 0.5, size = 9.5)) +
+    theme(axis.text.x = element_text(angle = 60, hjust = 1), axis.title.x = element_blank(), axis.title.y = element_blank()) +
+    geom_smooth(method = "lm", color = "red")
+
+  grid.arrange(all_before, all_after, nrow = 1, bottom = textGrob("Date"))
+```
+Figure 7: Relative Abundance of All Species Pre- and Post-Lionfish
+
+The final steps of preparing the data frame consisted of removing various species.  First, the red lionfish was removed from the data set.  Next, the total number of surveys of all species in each family was determined.  Families with fewer than 210 surveys for the entire 24-year period were removed from the data set.
+
+```{r Survey Count, echo=FALSE, message=FALSE}
+LC <- LC %>% filter(!(English_Name == "Red Lionfish (aka Common Lionfish)")) # Remove all lionfish surveys
+
+count_list <- LC %>% group_by(Family_Name) %>% summarize(count = n()) # Survey count for each family
+count_list <- count_list %>% filter(count_list$count > 210) # Remove families with too few surveys
+family_list <- as.vector(count_list[['Family_Name']]) # Create a vector list of family names
+LC_Mod <- LC %>% filter(Family_Name %in% family_list) # Create new data frame with list
+```
+
+### Preliminary Family Exploration
+In order to explore the general trend in relative abundance of each fish family, I generated plots of each family for the entire 24-year period.
+
+```{r Family 2, echo=FALSE, message=FALSE, fig.height=11.5, fig.width=8.0}
+plot_families <- function(the_data) {
+  ggplot(the_data, aes(x = Date, y = Abundance)) +
+    geom_point(size = 0.5) +
+    ggtitle("Abundance of Fish Families at Little Cayman") +
+    theme(plot.title = element_text(hjust = 0.5, size = 12)) +
+    theme(strip.text.x = element_text(size = 8.5), axis.text.x = element_text(angle = 60, hjust = 1)) +
+    facet_wrap(~Family_Name, ncol = 3) +
+    geom_smooth() +
+    geom_smooth(method = "lm", color = "red", se = FALSE)
+}
+
+family_1 <- LC_Mod %>% group_by(Family_Name) %>% filter(Family_Name <= "Goatfish")
+family_2 <- LC_Mod %>% group_by(Family_Name) %>% filter(Family_Name > "Goatfish")
+
+plot_families(family_1)
+```
+Figure 8: Abundance of Families 1
+
+```{r, message=FALSE, echo=FALSE, fig.height=11.5, fig.width=8.0}
+plot_families(family_2)
+```
+Figure 9: Abundance of Families 2
+
+### Family Exploration Before and After Lionfish Invasion
+Generate three plots for each family side-by-side.  The plot on the left shows the abundance vs. date of all species in the family as seen in Figures 8 and 9.  The center plot shows the data from when the surveys began (1994-03-27) to when the first lionfish sighting occurred (2009-02-17).  The plot on the right shows the data from the first lionfish sighting to the date when the data was provided (2018-04-09).  
+
+```{r Side-by-Side, echo=FALSE, message=FALSE, fig.height = 2.5, fig.width = 7}
+plot_pairs <- function(cur_fam, LC_Mod){
+  data_set_0 <- LC_Mod %>% filter(Family_Name == cur_fam)
+  data_set_1 <- LC_Mod %>% filter(Family_Name == cur_fam) %>% filter(Date < "2009-02-17")
+  data_set_2 <- LC_Mod %>% filter(Family_Name == cur_fam) %>% filter(Date >= "2009-02-17")
+  
+  complete <- ggplot(data_set_0, aes(x = Date, y = Abundance)) +
+    geom_point(size = 0.5) +
+    ggtitle("(All Data)") +
+    theme(plot.title = element_text(hjust = 0.5, size = 9.5)) +
+    theme(axis.text.x = element_text(angle = 60, hjust = 1), axis.title.x = element_blank()) +
+    geom_smooth(method = "lm", color = "red") +
+    ylim(0, 4)
+  before <- ggplot(data_set_1, aes(x = Date, y = Abundance)) +
+    geom_point(size = 0.5) +
+    ggtitle("(Pre Lionfish)") +
+    theme(plot.title = element_text(hjust = 0.5, size = 9.5)) +
+    theme(axis.text.x = element_text(angle = 60, hjust = 1), axis.title.x = element_blank(), axis.title.y = element_blank()) +
+    geom_smooth(method = "lm", color = "red") +
+    ylim(0, 4)
+  after <- ggplot(data_set_2, aes(x = Date, y = Abundance)) +
+    geom_point(size = 0.5) +
+    ggtitle("(Post Lionfish)") +
+    theme(plot.title = element_text(hjust = 0.5, size = 9.5)) +
+    theme(axis.text.x = element_text(angle = 60, hjust = 1), axis.title.x = element_blank(), axis.title.y = element_blank()) +
+    geom_smooth(method = "lm", color = "red") +
+    ylim(0, 4)
+
+  grid.arrange(complete, before, after, nrow = 1, top = textGrob(paste(cur_fam, "Family"), gp = gpar(fontsize = 12, font = 3)), bottom = textGrob("Date"))
+}
+
+invisible(lapply(family_list, FUN = plot_pairs, LC_Mod)) # All available families
+```
+Figure 10: Abundance of Families Pre- and Post-Lionfish
+
+### Density Comparison
+The next step was to conduct a density comparison on the slopes of the trendlines in the plots above.  The slopes of the trendlines in the center (pre-lionfish) and right (post-lionfish) plots above were determined with the linear model function (lm).  These values were added to a corresponding vector (pre_slope and post_slope) and these two vectors were used to generate a density plot for the two time periods.  Figure 11 shows the two density curves with blue corresponding to pre-lionfish data and orange corresponding to post-lionfish data.
+
+```{r Density Determination, echo=FALSE, message=FALSE}
+pre_slope <- NULL
+post_slope <- NULL
+
+for(i in seq_along(family_list)){
+  pre_LF <- LC_Mod %>% filter(Family_Name == family_list[i]) %>% filter(Date < "2009-02-17")
+  pre_m <- lm(pre_LF$Abundance~pre_LF$Date)
+  pre_slope[i] <- pre_m$coefficients["pre_LF$Date"]
+  
+  post_LF <- LC_Mod %>% filter(Family_Name == family_list[i]) %>% filter(Date >= "2009-02-17")
+  post_m <- lm(post_LF$Abundance~post_LF$Date)
+  post_slope[i] <- post_m$coefficients["post_LF$Date"]
+}
+```
+
+```{r, Density Plotting, echo=FALSE, message=FALSE}
+d1 <- density(pre_slope)
+d2 <- density(post_slope)
+xlim <- range(d1$x, d2$x)
+ylim <- range(d1$y, d2$y)
+cols <- c("blue", "orange")
+plot(1, xlim=xlim, ylim=ylim, type='n', xlab='Slope of Trendline fit to Family Abundance Data', ylab='Density')
+lines(d1$x, d1$y, col=cols[1])
+lines(d2$x, d2$y, col=cols[2])
+rug(pre_slope, col = "blue")
+rug(post_slope, col = "orange")
+lg <- NULL
+lg <- c(lg, sprintf('Pre Lionfish, n=%s', length(pre_slope)))
+lg <- c(lg, sprintf('Post Lionfish, n=%s', length(post_slope)))
+legend('topleft', lg, lwd=2, col=cols)
+```
+Figure 11: Density Plot Comparison Pre- and Post-Lionfish
+
+### Moving Window Average Slope (3-year window)
+Initialize the three most important dates in the data set: the date of the first survey, the date of the first lionfish sighting and the date the data was provided.
+
+```{r Initialization, message=FALSE}
+initial_date <- as.Date("1994-03-27") # Date that the first survey was taken
+final_date <- as.Date("2018-04-09") # Date of the last survey taken
+first_LF <- as.Date("2009-02-17") # Date of the first recorded lionfish sighting
+```
+
+Initialize the variables to study the abundance data as a function of time using a three (3) year moving window.
+
+```{r, message=FALSE}
+shift <- 1 # Duration from beginning of window to the beginning of next window (in years)
+window <- 3 # Size (length of time) of window (in years) - Should be equal to or larger than 'shift'
+begin_date <- initial_date # initialize beginning of window to date of first survey
+end_date <- begin_date %m+% years(window) # initialize end of window
+
+slope_DF <- data.frame(date = as.Date(NA), mean_slope = NA)
+
+i <- 1
+j <- 1
+```
+
+This code is used to plot abundance vs. date for each family for each 3-year window of time.  The slope of the trendline in each plot is recorded and used to generate a density plot.
+
+```{r 3 Year Window, message=FALSE, fig.height=3.0, fig.width=4.0}
+while(end_date <= final_date){
+  current_window <- LC_Mod %>% filter(Date >= begin_date & Date < end_date)
+  slopes <- NA
+  
+  for(i in seq_along(family_list)){
+    c_wind <- current_window %>% filter(Family_Name == family_list[i])
+    TL_slope <- lm(c_wind$Abundance ~ c_wind$Date)
+    slopes[i] <- TL_slope$coefficients["c_wind$Date"]
+  }
+
+  slope_DF[[j,1]] <- begin_date
+  slope_DF[[j,2]] <- mean(slopes)
+  j <- j+1
+  
+  d1 <- density(slopes)
+  xlim <- range(d1$x)
+  ylim <- range(d1$y)
+  cols <- "blue"
+  
+  plot(1, xlim=xlim, ylim=ylim, type='n', main=paste(begin_date, "to", end_date), xlab='Slope of Trendline fit to Family Abundance Data', ylab='Density')
+  rug(slopes)
+  density(slopes, adjust = 0.5)
+  lines(d1$x, d1$y, col=cols)
+  
+  begin_date <- begin_date %m+% years(shift)
+  end_date <- begin_date %m+% years(window)
+}
+```
+Figure 12: The First Two Density Plots for a 3-Year Window
+
+The average slope for each density plot was determined and these average values were plotted over the coarse of the 24 years.  This code shows the plot of the average values of slope for the 3-year window.
+
+```{r Mean Values, message=FALSE, fig.height=3.5}
+ggplot(slope_DF, aes(x = date, y = mean_slope)) +
+  geom_point(size = 0.75) +
+  geom_line() +
+  theme(plot.title = element_text(hjust = 0.5, size = 12.0)) +
+  geom_line(aes(slope_DF$date, 0), col = "green") +
+  geom_vline(xintercept=first_LF, col = "red") +
+  xlab(paste("Start Date of", window, "- year Window")) +
+  ylab("Mean Slope") +
+  theme_bw() +
+  annotate("text", x = as.Date("2012-01-01"), y = 1.25e-04, label = "First Lionfish", col = "red") +
+  annotate("text", x = as.Date("2012-01-01"), y = 0.9e-04, label = "Sighting", col = "red")
+```
+Figure 13: Mean Slope of Trendlines for 3-Year Moving Window of Abundance vs. Date for all Families
+
+### Moving Window Average Slope (4-year window)
+The following code repeats the analysis above for the three year moving window of time; only this time using a four year moving window.
+
+```{r, message=FALSE}
+shift <- 1
+window <- 4
+begin_date <- initial_date
+end_date <- begin_date %m+% years(window)
+
+slope_DF <- data.frame(date = as.Date(NA), mean_slope = NA)
+
+i <- 1
+j <- 1
+```
+
+```{r 4 Year Window, message=FALSE, fig.height=3.5}
+while(end_date <= final_date){
+  current_window <- LC_Mod %>% filter(Date >= begin_date & Date < end_date)
+  slopes <- NA
+  
+  for(i in seq_along(family_list)){
+    c_wind <- current_window %>% filter(Family_Name == family_list[i])
+    TL_slope <- lm(c_wind$Abundance ~ c_wind$Date)
+    slopes[i] <- TL_slope$coefficients["c_wind$Date"]
+  }
+
+  slope_DF[[j,1]] <- begin_date
+  slope_DF[[j,2]] <- mean(slopes)
+  j <- j+1
+  
+  d1 <- density(slopes)
+  xlim <- range(d1$x)
+  ylim <- range(d1$y)
+  cols <- "red"
+  
+  plot(1, xlim=xlim, ylim=ylim, type='n', main=paste(begin_date, "to", end_date), xlab='Slope of Trendline fit to Family Abundance Data', ylab='Density')
+  rug(slopes)
+  density(slopes, adjust = 0.5)
+  lines(d1$x, d1$y, col=cols)
+  
+  begin_date <- begin_date %m+% years(shift)
+  end_date <- begin_date %m+% years(window)
+}
+
+ggplot(slope_DF, aes(x = date, y = mean_slope)) +
+  geom_point(size = 0.75) +
+  geom_line() +
+  theme(plot.title = element_text(hjust = 0.5, size = 12.0)) +
+  geom_line(aes(slope_DF$date, 0), col = "green") +
+  geom_vline(xintercept=first_LF, col = "red") +
+  xlab(paste("Start Date of", window, "- year Window")) +
+  ylab("Mean Slope") +
+  theme_bw() +
+  annotate("text", x = as.Date("2012-01-01"), y = 1.25e-04, label = "First Lionfish", col = "red") +
+  annotate("text", x = as.Date("2012-01-01"), y = 1.0e-04, label = "Sighting", col = "red")
+```
+Figure 14: Mean Slope of Trendlines for 4-Year Moving Window of Abundance vs. Date for all Families
+
+### Moving Window Average Slope (5-year window)
+The following code repeats the analysis above for the three year moving window of time; only this time using a five year moving window.
+
+```{r, message=FALSE}
+shift <- 1
+window <- 5
+begin_date <- initial_date
+end_date <- begin_date %m+% years(window)
+
+slope_DF <- data.frame(date = as.Date(NA), mean_slope = NA)
+
+i <- 1
+j <- 1
+```
+
+```{r 5 Year Window, message=FALSE, fig.height=3.5}
+while(end_date <= final_date){
+  current_window <- LC_Mod %>% filter(Date >= begin_date & Date < end_date)
+  slopes <- NA
+  
+  for(i in seq_along(family_list)){
+    c_wind <- current_window %>% filter(Family_Name == family_list[i])
+    TL_slope <- lm(c_wind$Abundance ~ c_wind$Date)
+    slopes[i] <- TL_slope$coefficients["c_wind$Date"]
+  }
+
+  slope_DF[[j,1]] <- begin_date
+  slope_DF[[j,2]] <- mean(slopes)
+  j <- j+1
+  
+  d1 <- density(slopes)
+  xlim <- range(d1$x)
+  ylim <- range(d1$y)
+  cols <- "red"
+  
+  plot(1, xlim=xlim, ylim=ylim, type='n', main=paste(begin_date, "to", end_date), xlab='Slope of Trendline fit to Family Abundance Data', ylab='Density')
+  rug(slopes)
+  density(slopes, adjust = 0.5)
+  lines(d1$x, d1$y, col=cols)
+  
+  begin_date <- begin_date %m+% years(shift)
+  end_date <- begin_date %m+% years(window)
+}
+
+ggplot(slope_DF, aes(x = date, y = mean_slope)) +
+  geom_point(size = 0.75) +
+  geom_line() +
+  theme(plot.title = element_text(hjust = 0.5, size = 12.0)) +
+  geom_line(aes(slope_DF$date, 0), col = "green") +
+  geom_vline(xintercept=first_LF, col = "red") +
+  xlab(paste("Start Date of", window, "- year Window")) +
+  ylab("Mean Slope") +
+  theme_bw() +
+  annotate("text", x = as.Date("2011-05-01"), y = 1.25e-04, label = "First Lionfish", col = "red") +
+  annotate("text", x = as.Date("2011-05-01"), y = 1.0e-04, label = "Sighting", col = "red")
+```
+Figure 15: Mean Slope of Trendlines for 5-Year Moving Window of Abundance vs. Date for all Families
+
+### Moving Window Average Slope (6-year window)
+The following code repeats the analysis above for the three year moving window of time; only this time using a six year moving window.
+
+```{r, message=FALSE}
+shift <- 1
+window <- 6
+begin_date <- initial_date
+end_date <- begin_date %m+% years(window)
+
+slope_DF <- data.frame(date = as.Date(NA), mean_slope = NA)
+
+i <- 1
+j <- 1
+```
+
+```{r 6 Year Window, message=FALSE, fig.height=3.5}
+while(end_date <= final_date){
+  current_window <- LC_Mod %>% filter(Date >= begin_date & Date < end_date)
+  slopes <- NA
+  
+  for(i in seq_along(family_list)){
+    c_wind <- current_window %>% filter(Family_Name == family_list[i])
+    TL_slope <- lm(c_wind$Abundance ~ c_wind$Date)
+    slopes[i] <- TL_slope$coefficients["c_wind$Date"]
+  }
+
+  slope_DF[[j,1]] <- begin_date
+  slope_DF[[j,2]] <- mean(slopes)
+  j <- j+1
+  
+  d1 <- density(slopes)
+  xlim <- range(d1$x)
+  ylim <- range(d1$y)
+  cols <- "red"
+  
+  plot(1, xlim=xlim, ylim=ylim, type='n', main=paste(begin_date, "to", end_date), xlab='Slope of Trendline fit to Family Abundance Data', ylab='Density')
+  rug(slopes)
+  density(slopes, adjust = 0.5)
+  lines(d1$x, d1$y, col=cols)
+  
+  begin_date <- begin_date %m+% years(shift)
+  end_date <- begin_date %m+% years(window)
+}
+
+ggplot(slope_DF, aes(x = date, y = mean_slope)) +
+  geom_point(size = 0.75) +
+  geom_line() +
+  theme(plot.title = element_text(hjust = 1.0, size = 12.0)) +
+  geom_line(aes(slope_DF$date, 0), col = "green") +
+  geom_vline(xintercept=first_LF, col = "red") +
+  xlab(paste("Start Date of", window, "- year Window")) +
+  ylab("Mean Slope") +
+  theme_bw() +
+  annotate("text", x = as.Date("2006-11-01"), y = 1.25e-04, label = "First Lionfish", col = "red") +
+  annotate("text", x = as.Date("2006-11-01"), y = 1.0e-04, label = "Sighting", col = "red")
+```
+Figure 16: Mean Slope of Trendlines for 6-Year Moving Window of Abundance vs. Date for all Families
+
+### Fish Species Exploration for Specific Families
+Begin an analysis on key species in the Caribbean, specifically species with ideal prey characteristics of the lionfish such as those in the goby, seabass, snapper and wrasse families.  Juveniles in the seabass and snapper families are in danger of becoming prey for lionfish.  The following code isolates surveys of specific families and generates plots showing the abundance of each species.
+
+```{r Goby, echo=FALSE, message=FALSE, fig.height=7.0, fig.width=7.0}
+Goby <- LC_Mod %>% filter(Family_Name == "Goby")
+
+ggplot(Goby, aes(x = Date, y = Abundance)) +
+          geom_point(size = 0.5) +
+          ggtitle(paste("Goby Family")) +
+          theme(plot.title = element_text(hjust = 0.5, size = 12)) +
+          theme(strip.text.x = element_text(size = 8.0), axis.text.x = element_text(angle = 60, hjust = 1)) +
+          facet_wrap(~English_Name)
+```    
+Figure 17: Relative Abundance of Species in the Goby Family
+
+```{r Seabass, echo=FALSE, message=FALSE, fig.height=8.0, fig.width=7.0}
+Seabass <- LC_Mod %>% filter(Family_Name == "Seabass")
+
+ggplot(Seabass, aes(x = Date, y = Abundance)) +
+          geom_point(size = 0.5) +
+          ggtitle(paste("Seabass Family")) +
+          theme(plot.title = element_text(hjust = 0.5, size = 12)) +
+          theme(strip.text.x = element_text(size = 8.0), axis.text.x = element_text(angle = 60, hjust = 1)) +
+          facet_wrap(~English_Name)
+```    
+Figure 18: Relative Abundance of Species in the Seabass Family
+
+```{r Select Families, echo=FALSE, message=FALSE, fig.height=4.0, fig.width=7.0}
+Families <- c("Snapper", "Wrasse")
+
+for(i in seq_along(Families)){
+  current <- LC_Mod %>% filter(Family_Name == Families[i])
+  print(ggplot(current, aes(x = Date, y = Abundance)) +
+          geom_point(size = 0.5) +
+          ggtitle(paste("Relative Abundance of",Families[i],"Family")) +
+          theme(plot.title = element_text(hjust = 0.5)) +
+          geom_smooth())
+  print(ggplot(current, aes(x = Date, y = Abundance)) +
+          geom_point(size = 0.5) +
+          ggtitle(paste(Families[i],"Family")) +
+          theme(plot.title = element_text(hjust = 0.5, size = 12)) +
+          theme(strip.text.x = element_text(size = 8.0), axis.text.x = element_text(angle = 60, hjust = 1)) +
+          facet_wrap(~English_Name))
+}
+```
+Figure 19: Relative Abundance of Species in the Snapper and Wrasse Families
+
